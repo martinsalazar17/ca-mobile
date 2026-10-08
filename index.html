@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>USC Comptroller — My Cash Advances</title>
+<title>USC Comptroller — Cash Advances</title>
 <style>
   html, body {
     margin: 0;
@@ -24,7 +24,33 @@
     z-index: 2;
     transition: opacity 0.3s ease;
   }
-  #loader .spinner {
+  /* Launch video — the spinner underneath only disappears once the video is
+     actually playing, so a blocked autoplay or a missing file still shows a
+     working loader instead of a blank screen. */
+  #loaderStage {
+    position: relative;
+    width: min(60vw, 260px);
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #loaderVideo {
+    width: 100%;
+    height: auto;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #loaderVideo.playing { opacity: 1; }
+  #loaderFallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #loaderFallback .spinner {
     width: 36px;
     height: 36px;
     border: 3px solid rgba(255,255,255,0.25);
@@ -47,17 +73,37 @@
 <body>
 
   <div id="loader">
-    <div class="spinner"></div>
-    <div>Loading…</div>
+    <div id="loaderStage">
+      <video id="loaderVideo" muted loop playsinline autoplay preload="auto">
+        <source src="loading.mp4" type="video/mp4">
+      </video>
+      <div id="loaderFallback">
+        <div class="spinner"></div>
+        <div>Loading…</div>
+      </div>
+    </div>
   </div>
 
   <iframe
     id="app-frame"
     src="https://script.google.com/macros/s/AKfycbxSBHVpqyPQ7kpax48OPJ8FSZfxBqlSWYnr85PGpJfKGWwJRfnuVgxKVZ3CvqJJ9ksWiw/exec"
     title="USC Comptroller - Cash Advances"
-    allow="clipboard-write"
+    allow="clipboard-write; autoplay"
     onload="document.getElementById('loader').style.opacity='0'; setTimeout(function(){document.getElementById('loader').style.display='none';}, 300);">
   </iframe>
+
+  <script>
+    (function () {
+      var v = document.getElementById('loaderVideo');
+      v.muted = true;
+      v.addEventListener('playing', function () {
+        v.classList.add('playing');
+        document.getElementById('loaderFallback').style.display = 'none';
+      });
+      var p = v.play();
+      if (p && p.catch) p.catch(function () {});
+    })();
+  </script>
 
 </body>
 </html>
