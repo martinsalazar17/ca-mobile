@@ -10,7 +10,7 @@
     padding: 0;
     height: 100%;
     overflow: hidden;
-    background: #082c1f;
+    background: #F2F2F2;
     font-family: Arial, sans-serif;
   }
   #loader {
@@ -20,7 +20,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    background: #F2F2F2;   /* opaque, and matches the video's own background */
+    color: #5c6a61;
     z-index: 2;
     transition: opacity 0.3s ease;
   }
@@ -46,11 +47,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    opacity: 0;
+    animation: fadeIn 0.3s ease 1.5s forwards;  /* only appears if the video hasn't started by ~1.5s */
   }
+  @keyframes fadeIn { to { opacity: 1; } }
   #loaderFallback .spinner {
     width: 36px;
     height: 36px;
-    border: 3px solid rgba(255,255,255,0.25);
+    border: 3px solid rgba(8,44,31,0.12);
     border-top-color: #b8893b;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
