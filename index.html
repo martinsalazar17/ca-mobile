@@ -24,9 +24,6 @@
     z-index: 2;
     transition: opacity 0.3s ease;
   }
-  /* Launch video — the spinner underneath only disappears once the video is
-     actually playing, so a blocked autoplay or a missing file still shows a
-     working loader instead of a blank screen. */
   #loaderStage {
     position: relative;
     width: min(60vw, 260px);
@@ -69,12 +66,75 @@
     z-index: 1;
   }
 </style>
+<script>
+  /* The launch screen fades out only when ALL of these are true:
+       - the video has played through once   (videoDone)
+       - the Apps Script iframe has loaded   (iframeLoaded)
+       - the app says its first screen is up (appReady)
+     Each has a safety valve so a slow or missing piece never traps the user
+     behind the loader. */
+  var iframeLoaded = false, appReady = false, videoDone = false, videoStarted = false, hidden = false;
+
+  function tryHide() {
+    if (hidden || !(iframeLoaded && appReady && videoDone)) return;
+    hidden = true;
+    var loader = document.getElementById('loader');
+    loader.style.opacity = '0';
+    setTimeout(function () {
+      loader.style.display = 'none';
+      document.getElementById('loaderVideo').pause();
+    }, 300);
+  }
+  function skipVideo() { videoDone = true; tryHide(); }
+
+  function onFrameLoad() {
+    iframeLoaded = true;
+    // If the app never signals ready (e.g. an older version is deployed), stop waiting after 6s.
+    setTimeout(function () { appReady = true; tryHide(); }, 6000);
+    tryHide();
+  }
+
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'usc-ca-ready') { appReady = true; tryHide(); }
+  });
+
+  window.addEventListener('DOMContentLoaded', function () {
+    var v = document.getElementById('loaderVideo');
+    var fallback = document.getElementById('loaderFallback');
+    v.muted = true;
+
+    v.addEventListener('playing', function () {
+      videoStarted = true;
+      v.classList.add('playing');
+      fallback.style.display = 'none';
+    });
+    v.addEventListener('ended', function () {
+      videoDone = true;
+      // Still waiting on the app? Keep the animation going rather than freezing on the last frame.
+      if (!(iframeLoaded && appReady)) {
+        v.currentTime = 0;
+        var again = v.play();
+        if (again && again.catch) again.catch(function () {});
+      }
+      tryHide();
+    });
+
+    // Don't make anyone wait on a video that can't play.
+    var src = v.querySelector('source');
+    if (src) src.addEventListener('error', skipVideo);
+    v.addEventListener('error', skipVideo);
+    var p = v.play();
+    if (p && p.catch) p.catch(skipVideo);
+    setTimeout(function () { if (!videoStarted) skipVideo(); }, 4000);  // never started
+    setTimeout(skipVideo, 15000);                                       // started but stalled
+  });
+</script>
 </head>
 <body>
 
   <div id="loader">
     <div id="loaderStage">
-      <video id="loaderVideo" muted loop playsinline autoplay preload="auto">
+      <video id="loaderVideo" muted playsinline autoplay preload="auto">
         <source src="loading.mp4" type="video/mp4">
       </video>
       <div id="loaderFallback">
@@ -89,21 +149,8 @@
     src="https://script.google.com/macros/s/AKfycbxSBHVpqyPQ7kpax48OPJ8FSZfxBqlSWYnr85PGpJfKGWwJRfnuVgxKVZ3CvqJJ9ksWiw/exec"
     title="USC Comptroller - Cash Advances"
     allow="clipboard-write; autoplay"
-    onload="document.getElementById('loader').style.opacity='0'; setTimeout(function(){document.getElementById('loader').style.display='none';}, 300);">
+    onload="onFrameLoad()">
   </iframe>
-
-  <script>
-    (function () {
-      var v = document.getElementById('loaderVideo');
-      v.muted = true;
-      v.addEventListener('playing', function () {
-        v.classList.add('playing');
-        document.getElementById('loaderFallback').style.display = 'none';
-      });
-      var p = v.play();
-      if (p && p.catch) p.catch(function () {});
-    })();
-  </script>
 
 </body>
 </html>
